@@ -2,57 +2,72 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f5f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101513" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stocks">
 <title>Stock Calculator</title>
 <style>
 :root{--bg:#f3f5f4;--surface:#fff;--ink:#16201c;--muted:#66736d;--line:#dbe2de;--accent:#0f6b4f;--up:#0f7a4d;--down:#b3372d}
 @media (prefers-color-scheme:dark){:root{--bg:#101513;--surface:#18201d;--ink:#e8efeb;--muted:#92a198;--line:#2a3530;--accent:#4fc79b;--up:#4fc79b;--down:#f0786d}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif;padding:24px 16px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+button{touch-action:manipulation}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif;padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 main{max-width:520px;margin:0 auto}
 h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:-.01em}
 .sub{color:var(--muted);margin:0 0 20px;font-size:.95rem}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
 label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
 input,select,button{font:inherit;color:inherit}
-input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+input,select{width:100%;min-height:48px;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
 input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .row{display:flex;gap:10px}.row>*{flex:1}
-.tickers{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.chip{padding:7px 13px;border:1px solid var(--line);border-radius:99px;background:var(--bg);cursor:pointer}
+.tickers{display:flex;gap:8px;margin:0 -18px 14px;padding:2px 18px 6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tickers::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;min-height:44px;padding:8px 16px;border:1px solid var(--line);border-radius:99px;background:var(--bg);cursor:pointer}
 .chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 @media (prefers-color-scheme:dark){.chip[aria-pressed=true]{color:#06241a}}
 .modes{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
-.modes button{flex:1;padding:9px;border:0;background:var(--bg);cursor:pointer}
+.modes button{flex:1;min-height:46px;padding:9px;border:0;background:var(--bg);cursor:pointer}
 .modes button[aria-pressed=true]{background:var(--accent);color:#fff}
 @media (prefers-color-scheme:dark){.modes button[aria-pressed=true]{color:#06241a}}
 .price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.price b{font-size:2rem;letter-spacing:-.02em}
+.price b{font-size:clamp(1.8rem,8vw,2.2rem);letter-spacing:-.02em}
 .chg.up{color:var(--up)}.chg.down{color:var(--down)}
 .meta{color:var(--muted);font-size:.85rem;margin-top:4px}
-.result{font-size:2.4rem;font-weight:700;letter-spacing:-.02em;word-break:break-word}
-.btn{padding:10px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;cursor:pointer}
+.result{font-size:clamp(1.9rem,9vw,2.6rem);font-weight:700;letter-spacing:-.02em;word-break:break-word}
+.btn{min-height:48px;padding:10px 18px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;cursor:pointer}
 @media (prefers-color-scheme:dark){.btn{color:#06241a}}
 .btn.ghost{background:transparent;color:var(--accent)}
 .err{color:var(--down);font-size:.9rem;margin-top:8px}
-details summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+details summary{cursor:pointer;color:var(--muted);font-size:.95rem;min-height:44px;display:flex;align-items:center}
+@media (max-width:480px){.panel{padding:16px;border-radius:12px}.tickers{margin:0 -16px 14px;padding:2px 16px 6px}.row.stack{flex-direction:column;gap:12px}.row.stack>*{flex:none}.row.stack>.btn,.row.stack>div[style]{flex:none!important;width:100%}}
 details .row{margin-top:12px;align-items:end}
 </style>
 </head>
 <body>
 <main>
   <h1>Stock Calculator</h1>
-  <p class="sub">Pick a stock, enter an amount, and see its cost at the latest price.</p>
+  <p class="sub">Choose a sector and a stock, enter an amount, and see its cost at the latest price.</p>
 
   <div class="panel">
-    <div class="tickers" id="tickers" role="group" aria-label="Stocks"></div>
-    <div class="row" style="margin-bottom:14px">
-      <div><label for="custom">Add another ticker</label><input id="custom" placeholder="e.g. DIS" maxlength="10" autocapitalize="characters"></div>
-      <div style="flex:0 0 auto;align-self:end"><button class="btn ghost" id="add">Add</button></div>
-    </div>
+    <div style="margin-bottom:12px"><label for="sector">Sector</label><select id="sector"></select></div>
+    <div style="margin-bottom:14px"><label for="stock">Stock or coin</label><select id="stock"></select></div>
+    <details style="margin-bottom:12px"><summary>Add a ticker that isn't listed</summary>
+      <div class="row" style="margin-top:8px;align-items:end">
+        <div><label for="custom">Ticker (US, or add a suffix like TSCO.LON)</label><input id="custom" placeholder="e.g. DIS or SHOP.TRT" maxlength="14" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
+        <div style="flex:0 0 auto"><button class="btn ghost" id="add">Add</button></div>
+      </div>
+    </details>
+    <div class="row" style="margin-bottom:14px"><div><label for="cur">Currency the stock trades in</label>
+      <select id="cur"><option>USD</option><option>CAD</option><option>EUR</option><option value="GBX">GBX (pence)</option><option>GBP</option><option>INR</option><option>CNY</option><option>JPY</option><option>HKD</option><option>KRW</option><option>AUD</option><option>CHF</option></select></div></div>
     <div class="price"><b id="price">—</b><span class="chg" id="chg"></span></div>
     <div class="meta" id="meta">Enter a free Finnhub API key below to load live prices.</div>
     <div class="err" id="err" role="alert"></div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" id="refresh">Refresh price</button><button class="btn ghost" id="remove">Remove ticker</button></div>
   </div>
 
   <div class="panel">
@@ -61,7 +76,7 @@ details .row{margin-top:12px;align-items:end}
       <button id="m-dollars" aria-pressed="false">I have dollars</button>
     </div>
     <label for="amount" id="amtlabel">Number of shares</label>
-    <input id="amount" type="number" min="0" step="any" value="10" inputmode="decimal">
+    <input id="amount" type="number" min="0" step="any" value="10" inputmode="decimal" enterkeyhint="done">
     <div style="margin-top:18px">
       <div class="meta" id="reslabel">Value at current price</div>
       <div class="result" id="result">—</div>
@@ -71,14 +86,15 @@ details .row{margin-top:12px;align-items:end}
   <div class="panel">
     <details id="keybox">
       <summary>Price source settings</summary>
-      <div class="row">
-        <div><label for="key">Finnhub API key (free at finnhub.io)</label><input id="key" type="password" placeholder="Paste key" autocomplete="off"></div>
-        <div style="flex:0 0 auto"><button class="btn" id="save">Save</button></div>
+      <div class="row stack">
+        <div><label for="key">Finnhub key: US stocks (free at finnhub.io)</label><input id="key" type="password" placeholder="Paste key" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <div><label for="avkey">Alpha Vantage key: non-US stocks (free at alphavantage.co)</label><input id="avkey" type="password" placeholder="Paste key" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <div style="flex:0 0 auto"><button class="btn" id="save">Save keys</button></div>
       </div>
       <div class="row">
-        <div><label for="manual">Or type a price manually</label><input id="manual" type="number" min="0" step="any" placeholder="Override price"></div>
+        <div><label for="manual">Or type a price manually</label><input id="manual" type="number" min="0" step="any" placeholder="Override price" inputmode="decimal" enterkeyhint="done"></div>
       </div>
-      <p class="meta">Your key stays in this browser and is only sent to Finnhub. Prices refresh every 15 seconds; free-tier quotes may be delayed or limited outside market hours.</p>
+      <p class="meta">Cryptocurrency prices (in US dollars, refreshed every 30 seconds) come from CoinGecko and need no key. Keys stay in this browser and are only sent to their own provider. US prices refresh every 15 seconds. Alpha Vantage free keys allow about 25 requests a day, so non-US prices update when you select a stock or tap Refresh. Non-US exchange suffixes: .LON London, .TRT Toronto, .TRV TSX Venture, .DEX Germany (XETRA), .BSE Mumbai, .SHH Shanghai, .SHZ Shenzhen, .KS Korea (e.g. 005930.KS for Samsung Electronics). Korea support on Alpha Vantage is unconfirmed; if no price loads, type one manually below. Quotes may be delayed.</p>
     </details>
   </div>
 </main>
@@ -89,96 +105,208 @@ const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-let tickers = store.get('tickers', ['AAPL','MSFT','GOOGL','AMZN','TSLA','NVDA','META']);
-let selected = store.get('selected', tickers[0]);
-let apiKey = store.get('key', '');
-let mode = 'shares';
-let quote = null;
-let timer = null;
 
-const fmt = n => n.toLocaleString('en-US', {style:'currency', currency:'USD'});
+const CATALOG = {
+ 'Technology': [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','NVIDIA'],['AVGO','Broadcom'],['ORCL','Oracle'],['CRM','Salesforce'],['ADBE','Adobe'],['AMD','AMD'],['INTC','Intel'],['CSCO','Cisco'],['IBM','IBM'],['QCOM','Qualcomm'],['TXN','Texas Instruments'],['NOW','ServiceNow'],['PLTR','Palantir'],['MU','Micron'],['SAP.DEX','SAP (Germany)'],['SHOP.TRT','Shopify (Toronto)'],['TCS.BSE','Tata Consultancy (Mumbai)'],['005930.KS','Samsung Electronics (Korea)'],['000660.KS','SK Hynix (Korea)']],
+ 'Communication Services': [['GOOGL','Alphabet (Google)'],['META','Meta Platforms'],['NFLX','Netflix'],['DIS','Disney'],['CMCSA','Comcast'],['T','AT&T'],['VZ','Verizon'],['TMUS','T-Mobile US'],['SPOT','Spotify'],['TTWO','Take-Two Interactive'],['PINS','Pinterest'],['RDDT','Reddit']],
+ 'Consumer Discretionary': [['AMZN','Amazon'],['TSLA','Tesla'],['HD','Home Depot'],['MCD',"McDonald's"],['NKE','Nike'],['SBUX','Starbucks'],['LOW',"Lowe's"],['BKNG','Booking Holdings'],['TJX','TJX Companies'],['F','Ford'],['GM','General Motors'],['ABNB','Airbnb'],['LULU','Lululemon'],['CMG','Chipotle'],['MAR','Marriott'],['005380.KS','Hyundai Motor (Korea)'],['VOW3.DEX','Volkswagen (Germany)']],
+ 'Consumer Staples': [['WMT','Walmart'],['COST','Costco'],['PG','Procter & Gamble'],['KO','Coca-Cola'],['PEP','PepsiCo'],['PM','Philip Morris Intl'],['MDLZ','Mondelez'],['CL','Colgate-Palmolive'],['MO','Altria'],['TGT','Target'],['KHC','Kraft Heinz'],['GIS','General Mills'],['KMB','Kimberly-Clark'],['KR','Kroger'],['STZ','Constellation Brands'],['TSCO.LON','Tesco (London)'],['ULVR.LON','Unilever (London)']],
+ 'Health Care': [['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['UNH','UnitedHealth'],['ABBV','AbbVie'],['MRK','Merck'],['PFE','Pfizer'],['TMO','Thermo Fisher'],['ABT','Abbott'],['AMGN','Amgen'],['ISRG','Intuitive Surgical'],['GILD','Gilead'],['DHR','Danaher'],['MDT','Medtronic'],['CVS','CVS Health'],['BMY','Bristol Myers Squibb'],['VRTX','Vertex'],['REGN','Regeneron'],['AZN.LON','AstraZeneca (London)']],
+ 'Financials': [['BRK.B','Berkshire Hathaway B'],['JPM','JPMorgan Chase'],['V','Visa'],['MA','Mastercard'],['BAC','Bank of America'],['WFC','Wells Fargo'],['GS','Goldman Sachs'],['MS','Morgan Stanley'],['AXP','American Express'],['C','Citigroup'],['BLK','BlackRock'],['SCHW','Charles Schwab'],['PYPL','PayPal'],['COF','Capital One'],['SPGI','S&P Global'],['USB','U.S. Bancorp'],['HSBA.LON','HSBC (London)'],['RY.TRT','Royal Bank of Canada (Toronto)']],
+ 'Energy': [['XOM','Exxon Mobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['SLB','Schlumberger'],['EOG','EOG Resources'],['OXY','Occidental'],['MPC','Marathon Petroleum'],['PSX','Phillips 66'],['VLO','Valero'],['WMB','Williams Companies'],['KMI','Kinder Morgan'],['HAL','Halliburton'],['OKE','ONEOK'],['SHEL.LON','Shell (London)'],['RELIANCE.BSE','Reliance Industries (Mumbai)']],
+ 'Industrials': [['CAT','Caterpillar'],['GE','GE Aerospace'],['RTX','RTX'],['HON','Honeywell'],['UNP','Union Pacific'],['UPS','UPS'],['BA','Boeing'],['DE','Deere'],['LMT','Lockheed Martin'],['FDX','FedEx'],['ETN','Eaton'],['GD','General Dynamics'],['NOC','Northrop Grumman'],['WM','Waste Management'],['UBER','Uber'],['CSX','CSX'],['MMM','3M'],['SIE.DEX','Siemens (Germany)']],
+ 'Utilities': [['NEE','NextEra Energy'],['SO','Southern Company'],['DUK','Duke Energy'],['AEP','American Electric Power'],['D','Dominion Energy'],['EXC','Exelon'],['SRE','Sempra'],['XEL','Xcel Energy'],['PEG','PSEG'],['ED','Con Edison'],['PCG','PG&E'],['CEG','Constellation Energy'],['VST','Vistra']],
+ 'Real Estate': [['PLD','Prologis'],['AMT','American Tower'],['EQIX','Equinix'],['WELL','Welltower'],['SPG','Simon Property'],['O','Realty Income'],['PSA','Public Storage'],['CCI','Crown Castle'],['DLR','Digital Realty'],['VICI','VICI Properties'],['AVB','AvalonBay'],['EXR','Extra Space Storage']],
+ 'Materials': [['LIN','Linde'],['SHW','Sherwin-Williams'],['APD','Air Products'],['ECL','Ecolab'],['DD','DuPont'],['DOW','Dow'],['PPG','PPG Industries'],['LYB','LyondellBasell'],['NEM','Newmont'],['FCX','Freeport-McMoRan'],['NUE','Nucor'],['STLD','Steel Dynamics'],['ALB','Albemarle'],['VMC','Vulcan Materials'],['MLM','Martin Marietta'],['CTVA','Corteva'],['MOS','Mosaic'],['CF','CF Industries'],['BALL','Ball Corp'],['AMCR','Amcor'],['IP','International Paper'],['BHP.LON','BHP (London)'],['RIO.LON','Rio Tinto (London)']],
+ 'Cryptocurrency': [['BTC-USD','Bitcoin'],['ETH-USD','Ethereum'],['XRP-USD','XRP'],['BNB-USD','BNB'],['SOL-USD','Solana'],['DOGE-USD','Dogecoin'],['ADA-USD','Cardano'],['TRX-USD','TRON'],['AVAX-USD','Avalanche'],['LINK-USD','Chainlink'],['DOT-USD','Polkadot'],['LTC-USD','Litecoin'],['BCH-USD','Bitcoin Cash'],['XLM-USD','Stellar'],['SHIB-USD','Shiba Inu'],['UNI-USD','Uniswap'],['ATOM-USD','Cosmos'],['XMR-USD','Monero'],['ETC-USD','Ethereum Classic'],['NEAR-USD','NEAR Protocol'],['AAVE-USD','Aave']]
+};
+const CG = {'BTC-USD':'bitcoin','ETH-USD':'ethereum','XRP-USD':'ripple','BNB-USD':'binancecoin','SOL-USD':'solana','DOGE-USD':'dogecoin','ADA-USD':'cardano','TRX-USD':'tron','AVAX-USD':'avalanche-2','LINK-USD':'chainlink','DOT-USD':'polkadot','LTC-USD':'litecoin','BCH-USD':'bitcoin-cash','XLM-USD':'stellar','SHIB-USD':'shiba-inu','UNI-USD':'uniswap','ATOM-USD':'cosmos','XMR-USD':'monero','ETC-USD':'ethereum-classic','NEAR-USD':'near','AAVE-USD':'aave'};
+const isCrypto = s => !!CG[s];
+const SECTORS = Object.keys(CATALOG), ALL = 'All sectors', MINE = 'My added tickers';
+const AV_SUFFIX = {LON:'GBX', TRT:'CAD', TRV:'CAD', DEX:'EUR', BSE:'INR', SHH:'CNY', SHZ:'CNY', KS:'KRW'};
+const suffixOf = s => { const m = s.match(/\.([A-Z]{2,3})$/); return m && AV_SUFFIX[m[1]] ? m[1] : null; };
+const isIntl = s => !!suffixOf(s);
+const defCur = s => { const x = suffixOf(s); return x ? AV_SUFFIX[x] : 'USD'; };
 
-function renderTickers(){
-  $('tickers').innerHTML = '';
-  tickers.forEach(t => {
-    const b = document.createElement('button');
-    b.className = 'chip'; b.textContent = t;
-    b.setAttribute('aria-pressed', t === selected);
-    b.onclick = () => { selected = t; store.set('selected', t); renderTickers(); load(); };
-    $('tickers').appendChild(b);
+const catalog = [];
+SECTORS.forEach(sec => CATALOG[sec].forEach(([s, n]) => catalog.push({s, n, sec})));
+const inCatalog = s => catalog.some(x => x.s === s);
+
+// migrate tickers the user added in earlier versions
+let custom = store.get('custom', null);
+if (custom === null) {
+  custom = store.get('tickers', []).map(t => typeof t === 'string' ? t : t.s).filter(s => !inCatalog(s));
+  store.set('custom', custom);
+}
+let curs = store.get('curs', {});
+const curOf = s => curs[s] || defCur(s);
+const info = s => catalog.find(x => x.s === s) || {s, n:'Custom ticker', sec:MINE};
+
+let selected = store.get('selected', 'AAPL');
+let sectorFilter = store.get('sector', ALL);
+let fhKey = store.get('key', ''), avKey = store.get('avkey', '');
+let mode = 'shares', quote = null, status = '', timer = null;
+const avCache = {};
+
+function fmt(n, cur){
+  if (cur === 'GBX') return n.toLocaleString('en-US', {maximumFractionDigits:2}) + ' p';
+  try { return n.toLocaleString('en-US', n > 0 && n < 1 ? {style:'currency', currency:cur, minimumFractionDigits:2, maximumFractionDigits:8} : {style:'currency', currency:cur}); }
+  catch { return n.toFixed(2) + ' ' + cur; }
+}
+
+function listFor(f){
+  if (f === MINE) return custom.map(s => ({s, n:'Custom ticker', sec:MINE}));
+  return f === ALL ? catalog : catalog.filter(x => x.sec === f);
+}
+const opt = x => { const o = document.createElement('option'); o.value = x.s; o.textContent = x.s + ' · ' + x.n; return o; };
+
+function renderSectors(){
+  const sel = $('sector'); sel.innerHTML = '';
+  [ALL, ...SECTORS, ...(custom.length ? [MINE] : [])].forEach(n => {
+    const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
   });
+  if (![ALL, ...SECTORS, MINE].includes(sectorFilter) || (sectorFilter === MINE && !custom.length)) sectorFilter = ALL;
+  sel.value = sectorFilter;
+}
+
+function renderStocks(){
+  const sel = $('stock'); sel.innerHTML = '';
+  if (sectorFilter === ALL){
+    SECTORS.forEach(sec => {
+      const g = document.createElement('optgroup'); g.label = sec;
+      CATALOG[sec].forEach(([s, n]) => g.appendChild(opt({s, n})));
+      sel.appendChild(g);
+    });
+    if (custom.length){
+      const g = document.createElement('optgroup'); g.label = MINE;
+      custom.forEach(s => g.appendChild(opt({s, n:'Custom ticker'}))); sel.appendChild(g);
+    }
+  } else listFor(sectorFilter).forEach(x => sel.appendChild(opt(x)));
+  if (![...sel.options].some(o => o.value === selected)) selected = sel.options[0].value;
+  sel.value = selected;
+  $('cur').value = curOf(selected);
+  $('remove').style.display = custom.includes(selected) ? '' : 'none';
 }
 
 function activePrice(){
   const m = parseFloat($('manual').value);
-  if (m > 0) return m;
-  return quote ? quote.c : null;
+  return m > 0 ? m : (quote ? quote.c : null);
 }
 
 function calc(){
-  const p = activePrice();
-  const a = parseFloat($('amount').value);
+  const p = activePrice(), a = parseFloat($('amount').value), c = curOf(selected);
+  const crypto = isCrypto(selected), unitName = crypto ? 'coins' : 'shares';
+  $('m-shares').textContent = crypto ? 'I have coins' : 'I have shares';
+  const pence = c === 'GBX', unit = p ? (pence ? p / 100 : p) : null, money = pence ? 'GBP' : c;
   if (mode === 'shares'){
-    $('amtlabel').textContent = 'Number of shares';
-    $('reslabel').textContent = 'Value at current price';
-    $('result').textContent = (p && a >= 0) ? fmt(p * a) : '—';
+    $('amtlabel').textContent = 'Number of ' + unitName;
+    $('reslabel').textContent = 'Value at current price (' + money + ')';
+    $('result').textContent = (unit && a >= 0) ? fmt(unit * a, money) : '—';
   } else {
-    $('amtlabel').textContent = 'Dollar amount';
-    $('reslabel').textContent = 'Shares you could buy';
-    $('result').textContent = (p && a >= 0) ? (a / p).toLocaleString('en-US', {maximumFractionDigits:4}) + ' shares' : '—';
+    $('amtlabel').textContent = 'Amount in ' + money;
+    $('reslabel').textContent = (crypto ? 'Coins' : 'Shares') + ' you could buy';
+    $('result').textContent = (unit && a >= 0) ? (a / unit).toLocaleString('en-US', {maximumFractionDigits: crypto ? 8 : 4}) + ' ' + unitName : '—';
   }
 }
 
 function renderQuote(){
-  const manual = parseFloat($('manual').value) > 0;
-  if (manual){
-    $('price').textContent = fmt(parseFloat($('manual').value));
-    $('chg').textContent = ''; $('meta').textContent = selected + ' · manual price';
+  const c = curOf(selected), name = info(selected).n, manual = parseFloat($('manual').value);
+  if (manual > 0){
+    $('price').textContent = fmt(manual, c); $('chg').textContent = '';
+    $('meta').textContent = name + ' · manual price';
   } else if (quote){
-    $('price').textContent = fmt(quote.c);
+    $('price').textContent = fmt(quote.c, c);
     const up = quote.d >= 0;
     $('chg').className = 'chg ' + (up ? 'up' : 'down');
     $('chg').textContent = (up ? '+' : '') + quote.d.toFixed(2) + ' (' + (up ? '+' : '') + quote.dp.toFixed(2) + '%)';
-    $('meta').textContent = selected + ' · updated ' + new Date(quote.t * 1000 || Date.now()).toLocaleTimeString();
+    $('meta').textContent = name + ' · updated ' + new Date(quote.time).toLocaleTimeString() + (quote.day ? ' · last trade ' + quote.day : '');
   } else {
-    $('price').textContent = '—'; $('chg').textContent = '';
-    $('meta').textContent = apiKey ? 'Loading…' : 'Enter a free Finnhub API key below to load live prices.';
+    $('price').textContent = '—'; $('chg').textContent = ''; $('meta').textContent = status;
   }
   calc();
 }
 
-async function load(){
-  clearTimeout(timer);
-  $('err').textContent = ''; quote = null; renderQuote();
-  if (!apiKey) return;
-  const sym = selected;
-  try {
-    const r = await fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(sym) + '&token=' + encodeURIComponent(apiKey));
-    if (r.status === 401 || r.status === 403) throw new Error('API key was rejected. Check it in Price source settings.');
-    if (r.status === 429) throw new Error('Rate limit reached. Wait a minute, then try again.');
-    if (!r.ok) throw new Error('Price request failed (' + r.status + ').');
-    const q = await r.json();
-    if (sym !== selected) return;
-    if (!q || !q.c) throw new Error('No price found for ' + sym + '. Check the ticker symbol.');
-    quote = q; renderQuote();
-  } catch (e) {
-    $('err').textContent = e.message === 'Failed to fetch' ? 'Could not reach Finnhub. Check your connection.' : e.message;
-  }
-  timer = setTimeout(load, 15000);
+async function getJSON(url){
+  const r = await fetch(url);
+  if (r.status === 401 || r.status === 403) throw new Error('API key was rejected. Check it in Price source settings.');
+  if (r.status === 429) throw new Error('Rate limit reached. Wait a bit, then try again.');
+  if (!r.ok) throw new Error('Price request failed (' + r.status + ').');
+  return r.json();
+}
+async function fetchFinnhub(sym){
+  const q = await getJSON('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(sym) + '&token=' + encodeURIComponent(fhKey));
+  if (!q || !q.c) throw new Error('No price found for ' + sym + '. Finnhub free keys cover US stocks only; for others use an exchange suffix like .LON.');
+  return {c:q.c, d:q.d || 0, dp:q.dp || 0, time:(q.t ? q.t * 1000 : Date.now())};
+}
+async function fetchCrypto(sym){
+  const id = CG[sym];
+  const data = await getJSON('https://api.coingecko.com/api/v3/simple/price?ids=' + id + '&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true');
+  const g = data[id];
+  if (!g || !g.usd) throw new Error('No price found for ' + sym + '.');
+  const pct = g.usd_24h_change || 0;
+  return {c:g.usd, d:g.usd - g.usd / (1 + pct / 100), dp:pct, time:(g.last_updated_at ? g.last_updated_at * 1000 : Date.now())};
+}
+async function fetchAV(sym, force){
+  const hit = avCache[sym];
+  if (!force && hit && Date.now() - hit.at < 600000) return hit.q;
+  const data = await getJSON('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=' + encodeURIComponent(sym) + '&apikey=' + encodeURIComponent(avKey));
+  if (data.Information || data.Note) throw new Error('Alpha Vantage declined the request. Free keys allow about 25 a day, or the key may be wrong.');
+  const g = data['Global Quote'];
+  if (!g || !g['05. price']) throw new Error('No price found for ' + sym + '. Check the ticker and exchange suffix; Alpha Vantage may not cover that exchange, in which case type a price manually in settings.');
+  const q = {c:parseFloat(g['05. price']), d:parseFloat(g['09. change']) || 0, dp:parseFloat(g['10. change percent']) || 0, time:Date.now(), day:g['07. latest trading day']};
+  avCache[sym] = {q, at:Date.now()};
+  return q;
 }
 
+async function load(force){
+  clearTimeout(timer);
+  $('err').textContent = ''; quote = null;
+  const sym = selected, intl = isIntl(sym), crypto = isCrypto(sym), key = crypto ? 'none' : (intl ? avKey : fhKey);
+  if (!key){
+    status = intl ? 'Add a free Alpha Vantage key in Price source settings for non-US stocks.' : 'Add a free Finnhub key in Price source settings for US stocks.';
+    renderQuote(); return;
+  }
+  status = 'Loading…'; renderQuote();
+  try {
+    const q = crypto ? await fetchCrypto(sym) : intl ? await fetchAV(sym, force) : await fetchFinnhub(sym);
+    if (sym !== selected) return;
+    quote = q; renderQuote();
+  } catch (e) {
+    if (sym !== selected) return;
+    status = 'Price unavailable.'; renderQuote();
+    $('err').textContent = e.message === 'Failed to fetch' ? 'Could not reach the price service. Check your connection.' : e.message;
+  }
+  if (!intl) timer = setTimeout(() => load(), crypto ? 30000 : 15000);
+}
+
+$('sector').onchange = () => {
+  sectorFilter = $('sector').value; store.set('sector', sectorFilter);
+  renderStocks(); store.set('selected', selected); load();
+};
+$('stock').onchange = () => { selected = $('stock').value; store.set('selected', selected); $('cur').value = curOf(selected); $('remove').style.display = custom.includes(selected) ? '' : 'none'; load(); };
+$('cur').onchange = () => { curs[selected] = $('cur').value; store.set('curs', curs); renderQuote(); };
 $('add').onclick = () => {
   const t = $('custom').value.trim().toUpperCase();
-  if (!/^[A-Z.\-]{1,10}$/.test(t)) return;
-  if (!tickers.includes(t)) tickers.push(t);
-  store.set('tickers', tickers);
-  selected = t; store.set('selected', t);
-  $('custom').value = ''; renderTickers(); load();
+  if (!/^[A-Z0-9.\-]{1,14}$/.test(t)) return;
+  if (!inCatalog(t) && !custom.includes(t)) custom.push(t);
+  store.set('custom', custom);
+  selected = t; sectorFilter = inCatalog(t) ? ALL : MINE;
+  store.set('selected', t); store.set('sector', sectorFilter);
+  $('custom').value = ''; renderSectors(); renderStocks(); load();
 };
 $('custom').onkeydown = e => { if (e.key === 'Enter') $('add').click(); };
-$('save').onclick = () => { apiKey = $('key').value.trim(); store.set('key', apiKey); load(); };
+$('refresh').onclick = () => load(true);
+$('remove').onclick = () => {
+  custom = custom.filter(t => t !== selected); store.set('custom', custom);
+  renderSectors(); renderStocks(); store.set('selected', selected); store.set('sector', sectorFilter); load();
+};
+$('save').onclick = () => {
+  fhKey = $('key').value.trim(); avKey = $('avkey').value.trim();
+  store.set('key', fhKey); store.set('avkey', avKey); load(true);
+};
 $('amount').oninput = calc;
 $('manual').oninput = renderQuote;
+['amount','manual'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); }));
 ['shares','dollars'].forEach(m => $('m-' + m).onclick = () => {
   mode = m;
   $('m-shares').setAttribute('aria-pressed', m === 'shares');
@@ -186,9 +314,9 @@ $('manual').oninput = renderQuote;
   calc();
 });
 
-$('key').value = apiKey;
-if (!apiKey) $('keybox').open = true;
-renderTickers(); load();
+$('key').value = fhKey; $('avkey').value = avKey;
+if (!fhKey && !avKey) $('keybox').open = true;
+renderSectors(); renderStocks(); load();
 </script>
 </body>
 </html>
