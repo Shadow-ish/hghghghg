@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock Calculator</title>
+<style>
+:root{--bg:#f3f5f4;--surface:#fff;--ink:#16201c;--muted:#66736d;--line:#dbe2de;--accent:#0f6b4f;--up:#0f7a4d;--down:#b3372d}
+@media (prefers-color-scheme:dark){:root{--bg:#101513;--surface:#18201d;--ink:#e8efeb;--muted:#92a198;--line:#2a3530;--accent:#4fc79b;--up:#4fc79b;--down:#f0786d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif;padding:24px 16px}
+main{max-width:520px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 20px;font-size:.95rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.tickers{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{padding:7px 13px;border:1px solid var(--line);border-radius:99px;background:var(--bg);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.chip[aria-pressed=true]{color:#06241a}}
+.modes{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
+.modes button{flex:1;padding:9px;border:0;background:var(--bg);cursor:pointer}
+.modes button[aria-pressed=true]{background:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.modes button[aria-pressed=true]{color:#06241a}}
+.price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.price b{font-size:2rem;letter-spacing:-.02em}
+.chg.up{color:var(--up)}.chg.down{color:var(--down)}
+.meta{color:var(--muted);font-size:.85rem;margin-top:4px}
+.result{font-size:2.4rem;font-weight:700;letter-spacing:-.02em;word-break:break-word}
+.btn{padding:10px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;cursor:pointer}
+@media (prefers-color-scheme:dark){.btn{color:#06241a}}
+.btn.ghost{background:transparent;color:var(--accent)}
+.err{color:var(--down);font-size:.9rem;margin-top:8px}
+details summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+details .row{margin-top:12px;align-items:end}
+</style>
+</head>
+<body>
+<main>
+  <h1>Stock Calculator</h1>
+  <p class="sub">Pick a stock, enter an amount, and see its cost at the latest price.</p>
+
+  <div class="panel">
+    <div class="tickers" id="tickers" role="group" aria-label="Stocks"></div>
+    <div class="row" style="margin-bottom:14px">
+      <div><label for="custom">Add another ticker</label><input id="custom" placeholder="e.g. DIS" maxlength="10" autocapitalize="characters"></div>
+      <div style="flex:0 0 auto;align-self:end"><button class="btn ghost" id="add">Add</button></div>
+    </div>
+    <div class="price"><b id="price">—</b><span class="chg" id="chg"></span></div>
+    <div class="meta" id="meta">Enter a free Finnhub API key below to load live prices.</div>
+    <div class="err" id="err" role="alert"></div>
+  </div>
+
+  <div class="panel">
+    <div class="modes" role="group" aria-label="Calculation mode">
+      <button id="m-shares" aria-pressed="true">I have shares</button>
+      <button id="m-dollars" aria-pressed="false">I have dollars</button>
+    </div>
+    <label for="amount" id="amtlabel">Number of shares</label>
+    <input id="amount" type="number" min="0" step="any" value="10" inputmode="decimal">
+    <div style="margin-top:18px">
+      <div class="meta" id="reslabel">Value at current price</div>
+      <div class="result" id="result">—</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <details id="keybox">
+      <summary>Price source settings</summary>
+      <div class="row">
+        <div><label for="key">Finnhub API key (free at finnhub.io)</label><input id="key" type="password" placeholder="Paste key" autocomplete="off"></div>
+        <div style="flex:0 0 auto"><button class="btn" id="save">Save</button></div>
+      </div>
+      <div class="row">
+        <div><label for="manual">Or type a price manually</label><input id="manual" type="number" min="0" step="any" placeholder="Override price"></div>
+      </div>
+      <p class="meta">Your key stays in this browser and is only sent to Finnhub. Prices refresh every 15 seconds; free-tier quotes may be delayed or limited outside market hours.</p>
+    </details>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let tickers = store.get('tickers', ['AAPL','MSFT','GOOGL','AMZN','TSLA','NVDA','META']);
+let selected = store.get('selected', tickers[0]);
+let apiKey = store.get('key', '');
+let mode = 'shares';
+let quote = null;
+let timer = null;
+
+const fmt = n => n.toLocaleString('en-US', {style:'currency', currency:'USD'});
+
+function renderTickers(){
+  $('tickers').innerHTML = '';
+  tickers.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = t;
+    b.setAttribute('aria-pressed', t === selected);
+    b.onclick = () => { selected = t; store.set('selected', t); renderTickers(); load(); };
+    $('tickers').appendChild(b);
+  });
+}
+
+function activePrice(){
+  const m = parseFloat($('manual').value);
+  if (m > 0) return m;
+  return quote ? quote.c : null;
+}
+
+function calc(){
+  const p = activePrice();
+  const a = parseFloat($('amount').value);
+  if (mode === 'shares'){
+    $('amtlabel').textContent = 'Number of shares';
+    $('reslabel').textContent = 'Value at current price';
+    $('result').textContent = (p && a >= 0) ? fmt(p * a) : '—';
+  } else {
+    $('amtlabel').textContent = 'Dollar amount';
+    $('reslabel').textContent = 'Shares you could buy';
+    $('result').textContent = (p && a >= 0) ? (a / p).toLocaleString('en-US', {maximumFractionDigits:4}) + ' shares' : '—';
+  }
+}
+
+function renderQuote(){
+  const manual = parseFloat($('manual').value) > 0;
+  if (manual){
+    $('price').textContent = fmt(parseFloat($('manual').value));
+    $('chg').textContent = ''; $('meta').textContent = selected + ' · manual price';
+  } else if (quote){
+    $('price').textContent = fmt(quote.c);
+    const up = quote.d >= 0;
+    $('chg').className = 'chg ' + (up ? 'up' : 'down');
+    $('chg').textContent = (up ? '+' : '') + quote.d.toFixed(2) + ' (' + (up ? '+' : '') + quote.dp.toFixed(2) + '%)';
+    $('meta').textContent = selected + ' · updated ' + new Date(quote.t * 1000 || Date.now()).toLocaleTimeString();
+  } else {
+    $('price').textContent = '—'; $('chg').textContent = '';
+    $('meta').textContent = apiKey ? 'Loading…' : 'Enter a free Finnhub API key below to load live prices.';
+  }
+  calc();
+}
+
+async function load(){
+  clearTimeout(timer);
+  $('err').textContent = ''; quote = null; renderQuote();
+  if (!apiKey) return;
+  const sym = selected;
+  try {
+    const r = await fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(sym) + '&token=' + encodeURIComponent(apiKey));
+    if (r.status === 401 || r.status === 403) throw new Error('API key was rejected. Check it in Price source settings.');
+    if (r.status === 429) throw new Error('Rate limit reached. Wait a minute, then try again.');
+    if (!r.ok) throw new Error('Price request failed (' + r.status + ').');
+    const q = await r.json();
+    if (sym !== selected) return;
+    if (!q || !q.c) throw new Error('No price found for ' + sym + '. Check the ticker symbol.');
+    quote = q; renderQuote();
+  } catch (e) {
+    $('err').textContent = e.message === 'Failed to fetch' ? 'Could not reach Finnhub. Check your connection.' : e.message;
+  }
+  timer = setTimeout(load, 15000);
+}
+
+$('add').onclick = () => {
+  const t = $('custom').value.trim().toUpperCase();
+  if (!/^[A-Z.\-]{1,10}$/.test(t)) return;
+  if (!tickers.includes(t)) tickers.push(t);
+  store.set('tickers', tickers);
+  selected = t; store.set('selected', t);
+  $('custom').value = ''; renderTickers(); load();
+};
+$('custom').onkeydown = e => { if (e.key === 'Enter') $('add').click(); };
+$('save').onclick = () => { apiKey = $('key').value.trim(); store.set('key', apiKey); load(); };
+$('amount').oninput = calc;
+$('manual').oninput = renderQuote;
+['shares','dollars'].forEach(m => $('m-' + m).onclick = () => {
+  mode = m;
+  $('m-shares').setAttribute('aria-pressed', m === 'shares');
+  $('m-dollars').setAttribute('aria-pressed', m === 'dollars');
+  calc();
+});
+
+$('key').value = apiKey;
+if (!apiKey) $('keybox').open = true;
+renderTickers(); load();
+</script>
+</body>
+</html>
